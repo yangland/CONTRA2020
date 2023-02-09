@@ -267,14 +267,24 @@ class Helper:
                 num_samples=num_samples_dict[state_keys[i]]
 
                 for name, data in local_model_update_list[0].items():
-                    update[name] = torch.zeros_like(data)
+                    update[name] = torch.zeros_like(torch.tensor(data))
 
                 for j in range(0, len(local_model_update_list)):
                     local_model_update_dict= local_model_update_list[j]
                     for name, data in local_model_update_dict.items():
-                        weight_accumulator[name].add_(local_model_update_dict[name])
-                        update[name].add_(local_model_update_dict[name])
-                        detached_data= data.cpu().detach().numpy()
+                        # Yang updated to torch.tensor(XX).cuda()
+                        weight_accumulator[name].add_(torch.tensor(local_model_update_dict[name]).to(config.device))
+
+                        # Yang: update is a dict, add_ works on tensor
+                        # update[name].add_(local_model_update_dict[name])
+                        update[name] = local_model_update_dict[name]
+
+                        # Yang: data is cuda tensor
+                        # detached_data= data.cpu().detach().numpy()
+                        # print("data", data)
+                        # sometimes this data is list, int, can be different types
+                        detached_data = torch.tensor(data).cpu().numpy()
+
                         # print(detached_data.shape)
                         detached_data=detached_data.tolist()
                         # print(detached_data)
@@ -282,7 +292,7 @@ class Helper:
 
                 updates[state_keys[i]]=(num_samples,update)
 
-            return weight_accumulator,updates
+            return weight_accumulator, updates
 
     def init_weight_accumulator(self, target_model):
         weight_accumulator = dict()
@@ -400,7 +410,11 @@ class Helper:
                                     weight_decay=self.params['decay'])
 
         optimizer.zero_grad()
-        agg_grads, wv,alpha = self.fg.aggregate_gradients(client_grads,names)
+
+        # yang debugging
+        print("self.fg.aggregate_gradients(client_grads,names): ", len(self.fg.aggregate_gradients(client_grads, names)))
+
+        agg_grads, wv, alpha = self.fg.aggregate_gradients(client_grads,names)
         for i, (name, params) in enumerate(target_model.named_parameters()):
             agg_grads[i]=agg_grads[i] * self.params["eta"]
             if params.requires_grad:
@@ -439,7 +453,9 @@ class Helper:
 
         optimizer.zero_grad()
 
-        agg_grads, wv,alpha, avg_cs, cs_sorted = self.fg.aggregate_gradients(client_grads,names)
+
+
+        agg_grads, wv,alpha, avg_cs, cs_sorted = self.fg.aggregate_gradients(client_grads, names)
         for i, (name, params) in enumerate(target_model.named_parameters()):
                 agg_grads[i]=agg_grads[i] * self.params["eta"]
                 if params.requires_grad:

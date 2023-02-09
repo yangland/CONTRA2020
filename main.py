@@ -33,7 +33,7 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 logger = logging.getLogger("logger")
 # logger.setLevel("ERROR")
 
-vis = visdom.Visdom(port=8090)
+vis = visdom.Visdom(port=8097)
 criterion = torch.nn.CrossEntropyLoss()
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument('--params', dest='params')
     args = parser.parse_args()
     with open(f'./{args.params}', 'r') as f:
-        params_loaded = yaml.load(f)
+        params_loaded = yaml.safe_load(f)
     current_time = datetime.datetime.now().strftime('%b.%d_%H.%M.%S')
     if params_loaded['type'] == config.TYPE_LOAN:
         helper = LoanHelper(current_time=current_time, params=params_loaded,
