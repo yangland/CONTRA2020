@@ -214,7 +214,8 @@ if __name__ == '__main__':
             #vis_fg_alpha(helper,names,alphas,epoch,vis,adversarial_name_keys )
             #num_oracle_calls = 1
         elif helper.params['aggregation_methods'] == config.AGGR_CONTRA:
-            is_updated, names, client_grads,reputation_dict = helper.contra_update(helper.target_model, updates,reputation_dict)
+            # return True, names, wv, alpha, client_grads, reputation_dict
+            is_updated, names, wv, alpha, client_grads,reputation_dict = helper.contra_update(helper.target_model, updates, reputation_dict)
             #vis_agg_weight(helper,names,weights,epoch,vis,adversarial_name_keys)
             #vis_fg_alpha(helper,names,alphas,epoch,vis,adversarial_name_keys )
             #num_oracle_calls = 1

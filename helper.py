@@ -297,7 +297,7 @@ class Helper:
     def init_weight_accumulator(self, target_model):
         weight_accumulator = dict()
         for name, data in target_model.state_dict().items():
-            weight_accumulator[name] = torch.zeros_like(data)
+            weight_accumulator[name] = torch.zeros_like(torch.tensor(data))
 
         return weight_accumulator
 
@@ -412,9 +412,10 @@ class Helper:
         optimizer.zero_grad()
 
         # yang debugging
-        print("self.fg.aggregate_gradients(client_grads,names): ", len(self.fg.aggregate_gradients(client_grads, names)))
+        # print("self.fg.aggregate_gradients(client_grads,names): ", len(self.fg.aggregate_gradients(client_grads, names)))
+        # agg_grads, wv, alpha, avg_cs, cs_sorted
 
-        agg_grads, wv, alpha = self.fg.aggregate_gradients(client_grads,names)
+        agg_grads, wv, alpha, avg_cs, cs_sorted = self.fg.aggregate_gradients(client_grads,names)
         for i, (name, params) in enumerate(target_model.named_parameters()):
             agg_grads[i]=agg_grads[i] * self.params["eta"]
             if params.requires_grad:
@@ -424,7 +425,7 @@ class Helper:
         utils.csv_record.add_weight_result(names, wv, alpha)
         return True, names, wv, alpha, client_grads
 
-    def contra_update(self,target_model,updates, reputation_dict):
+    def contra_update(self, target_model, updates, reputation_dict):
         client_grads = []
         epsilon=1E-5
         alphas = []
@@ -456,9 +457,18 @@ class Helper:
 
 
         agg_grads, wv,alpha, avg_cs, cs_sorted = self.fg.aggregate_gradients(client_grads, names)
+
         for i, (name, params) in enumerate(target_model.named_parameters()):
                 agg_grads[i]=agg_grads[i] * self.params["eta"]
+
+                print("i: ", i)
+                print("name: ", name)
+                print("params: ", params.size())
+                print("len(agg_grads[i]): ", len(agg_grads[i]))
+                print("agg_grads[i]", agg_grads[i].size())
+
                 if params.requires_grad:
+                    # params.grad = agg_grads[i].to(config.device)
                     params.grad = agg_grads[i].to(config.device)
         #target_model2 = target_model
         #losses = []
@@ -557,9 +567,12 @@ class Helper:
 
         if max_update_norm is None or update_norm < max_update_norm:
             for name, data in target_model.state_dict().items():
-                update_per_layer = median[name] * (self.params["eta"])
+                # Yang added .to(config.device)
+                update_per_layer = median[name] * (self.params["eta"]).to(config.device)
                 if self.params['diff_privacy']:
                     update_per_layer.add_(self.dp_noise(data, self.params['sigma']))
+                # Yang added
+                data = data.to(config.device)
                 data.add_(update_per_layer)
             is_updated = True
         else:
@@ -575,7 +588,12 @@ class Helper:
         """L2 distance between p1, p2, each of which is a list of nd-arrays"""
         squared_sum = 0
         for name, data in p1.items():
-            squared_sum += torch.sum(torch.pow(p1[name]- p2[name], 2))
+            # Yang: # unsupported operand type(s) for -: 'Tensor' and 'list'
+            # squared_sum += torch.sum(torch.pow(p1[name]- p2[name], 2))
+            p_1 = torch.tensor(p1[name]).to(config.device)
+            p_2 = torch.tensor(p2[name]).to(config.device)
+            squared_sum += torch.sum(torch.pow(p_1 - p_2, 2))
+
         return math.sqrt(squared_sum)
 
 
@@ -603,11 +621,20 @@ class Helper:
         weighted_updates= dict()
 
         for name, data in points[0].items():
-            weighted_updates[name]=  torch.zeros_like(data)
+            weighted_updates[name]=  torch.zeros_like(torch.tensor(data))
         for w, p in zip(weights, points): # 对每一个agent
             for name, data in weighted_updates.items():
                 temp = (w / tot_weights).float().to(config.device)
-                temp= temp* (p[name].float())
+
+                # Yang:
+                # temp= temp* (p[name].float())
+                # print ("p[name]: ", p[name]) tensor on CUDA
+                # print ("temp", temp)
+                temp = temp * torch.tensor(p[name]).to(config.device)
+                # torch.tensor(data).cpu().numpy()
+
+                data = data.to(config.device)
+
                 # temp = w / tot_weights * p[name]
                 if temp.dtype!=data.dtype:
                     temp = temp.type_as(data)
@@ -778,14 +805,22 @@ class FoolsGold(object):
     def aggregate_gradients(self,client_grads,names):
         cur_time = time.time()
         num_clients = len(client_grads)
-        grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod()
+
+        # print(len(client_grads))
+        # print("client_grads[0]", client_grads[0])
+
+        # grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod()
+        grad_len = np.array(client_grads[0]["fc2.weight"].cpu().data.numpy().shape).prod()
 
         # if self.memory is None:
         #     self.memory = np.zeros((num_clients, grad_len))
         self.memory = np.zeros((num_clients, grad_len))
         grads = np.zeros((num_clients, grad_len))
         for i in range(len(client_grads)):
-            grads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
+
+            # print("client_grads[i][fc2.weight]", client_grads[i]["fc2.weight"])
+            # rads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
+            grads[i] = np.reshape(torch.tensor(client_grads[i]["fc2.weight"]).detach().cpu().numpy(), (grad_len)) if len(client_grads) !=0 else 0
             if names[i] in self.memory_dict.keys():
                 self.memory_dict[names[i]]+=grads[i]
             else:
@@ -802,20 +837,49 @@ class FoolsGold(object):
 
         agg_grads = []
 
+        print("len(client_grads)", len(client_grads)) # 8
+        print("len(client_grads[0])", len(client_grads[0])) #2
+        print("client_grads[0]", client_grads[0]) # 'fc2.weight': , 'fc2.bias':
+        # print("client_grads[0]['fc2.weight']", client_grads[0]['fc2.weight'])
+        print("client_grads[0]['fc2.weight'].size()", client_grads[0]['fc2.weight'].size()) #[10,784]
+
         # Iterate through each layer
-        for i in range(len(client_grads[0])):
-            assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
-            temp = wv[0] * client_grads[0][i].cpu().clone()
-            # Aggregate gradients for a layer
-            for c, client_grad in enumerate(client_grads):
-                if c == 0:
-                    continue
-                temp += wv[c] * client_grad[i].cpu()
-            temp = temp / len(client_grads)
-            agg_grads.append(temp)
+        for j in range(len(client_grads)):
+            temp_W = []
+            temp_B = []
+            for i in range(len(client_grads[0]['fc2.weight'])):
+                assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
+                # print("wv[0]", wv[0]) # 0.0
 
+                # temp = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
+                temp_w = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
+                temp_b = wv[0] * torch.tensor(client_grads[j]['fc2.bias'][i]).cpu().clone()
+                # Aggregate gradients for a layer
+                for c, client_grad in enumerate(client_grads):
+                    if c == 0:
+                        continue
+                    # print("client_grad", client_grad)
+                    # temp += wv[c] * torch.tensor(client_grad['fc2.weight'][i]).cpu()
+                    # print("wv[c]: ", wv[c]) #0.0
+                    # print("client_grad['fc2.weight'][i]: ", client_grad['fc2.weight'][i])
+                    temp_w += wv[c] * torch.tensor(client_grad['fc2.weight'][i]).cpu()
+                    temp_b += wv[c] * torch.tensor(client_grad['fc2.bias'][i]).cpu()
+                temp_w = temp_w / len(client_grads)
+                temp_b = temp_b / len(client_grads)
 
-        print('model aggregation took {}s'.format(time.time() - cur_time))
+                # print("len(temp)", len(temp))
+                temp_W.append(temp_w)
+                temp_B.append(temp_b)
+                stacked_temp_w = torch.stack(temp_W)
+                stacked_temp_b = torch.stack(temp_B)
+            # print("len(temp2)", len(temp2))
+            agg_grads.append(stacked_temp_w)
+            agg_grads.append(stacked_temp_b)
+
+        # print("agg_grads size", len(agg_grads), "*", len(agg_grads[0]), "*", len(agg_grads[0][0])) # 8 * 10 * 784
+
+        # print('model aggregation took {}s'.format(time.time() - cur_time))
+        # agg_grads_rst = torch.as_tensor(agg_grads)
         return agg_grads, wv, alpha, avg_cs, cs_sorted
 
     def foolsgold(self,grads):
