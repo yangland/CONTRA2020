@@ -52,7 +52,16 @@ def Mytest(helper, epoch,
             #print(targets)
             #print(targetIdx)
             #correct_1 += correct1.eq(targetIdx).sum().item()
-            attacked_1 += len(np.where(pred[targetIdx] == 9))
+
+            # Yang debugging
+            # debug1 = targetIdx
+            # debug2 = pred[targetIdx]
+            # debug3 = np.where(pred[targetIdx].cpu() == 9)
+            #
+            #
+            # print(debug1, debug2, debug3)
+
+            attacked_1 += len(np.where(pred[targetIdx].cpu() == 9))
             #attacked2 = attacked1 /(len(targetIdx))
             #correct2 += pred.eq(targets.data.view_as(pred)).cpu().item()==9
             #correct1 = np.where(pred[targetIdx] == 4)

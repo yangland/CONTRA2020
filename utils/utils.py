@@ -23,7 +23,7 @@ import copy
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from torchtext.data import Batch
+# from torchtext.data import Batch
 
 import torch.nn.functional as F
 
@@ -188,7 +188,7 @@ def evaluate(model, eval_loader, device, loss_fn=None, verbose=False, label_flip
 		print("Loss: {:.6f}. Accuracy: {:.4%}.".format(loss, accuracy))
 	return loss, accuracy
 
-from torchtext.data import Batch
+# from torchtext.data import Batch
 def train_model(model, loader, loss_fn, optimizer, device, E=1, **kwargs):
 
 	model.train()
