@@ -431,7 +431,9 @@ class Helper:
         alphas = []
         names = []
         for name, data in updates.items():
-            client_grads.append(data[1])  # gradient
+            # print("data[1]", data[1])
+            # client_grads.append(data[1])  # gradient
+            client_grads.append([data[1]['fc2.weight'], data[1]['fc2.bias']])  # gradient
             alphas.append(data[0])  # num_samples
             names.append(name)
 
@@ -461,11 +463,11 @@ class Helper:
         for i, (name, params) in enumerate(target_model.named_parameters()):
                 agg_grads[i]=agg_grads[i] * self.params["eta"]
 
-                print("i: ", i)
-                print("name: ", name)
-                print("params: ", params.size())
-                print("len(agg_grads[i]): ", len(agg_grads[i]))
-                print("agg_grads[i]", agg_grads[i].size())
+                # print("i: ", i)
+                # print("name: ", name)
+                # print("params: ", params.size())
+                # print("len(agg_grads[i]): ", len(agg_grads[i]))
+                # print("agg_grads[i]", agg_grads[i].size())
 
                 if params.requires_grad:
                     # params.grad = agg_grads[i].to(config.device)
@@ -568,7 +570,7 @@ class Helper:
         if max_update_norm is None or update_norm < max_update_norm:
             for name, data in target_model.state_dict().items():
                 # Yang added .to(config.device)
-                update_per_layer = median[name] * (self.params["eta"]).to(config.device)
+                update_per_layer = median[name] * torch.tensor(self.params["eta"]).to(config.device)
                 if self.params['diff_privacy']:
                     update_per_layer.add_(self.dp_noise(data, self.params['sigma']))
                 # Yang added
@@ -806,11 +808,11 @@ class FoolsGold(object):
         cur_time = time.time()
         num_clients = len(client_grads)
 
-        # print(len(client_grads))
+        # print("len(client_grads)", len(client_grads))
         # print("client_grads[0]", client_grads[0])
 
         # grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod()
-        grad_len = np.array(client_grads[0]["fc2.weight"].cpu().data.numpy().shape).prod()
+        grad_len = np.array(torch.tensor(client_grads[0][0]).cpu().data.numpy().shape).prod()
 
         # if self.memory is None:
         #     self.memory = np.zeros((num_clients, grad_len))
@@ -820,7 +822,7 @@ class FoolsGold(object):
 
             # print("client_grads[i][fc2.weight]", client_grads[i]["fc2.weight"])
             # rads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
-            grads[i] = np.reshape(torch.tensor(client_grads[i]["fc2.weight"]).detach().cpu().numpy(), (grad_len)) if len(client_grads) !=0 else 0
+            grads[i] = np.reshape(torch.tensor(client_grads[i][0]).detach().cpu().numpy(), (grad_len)) if len(client_grads) !=0 else 0
             if names[i] in self.memory_dict.keys():
                 self.memory_dict[names[i]]+=grads[i]
             else:
@@ -837,23 +839,23 @@ class FoolsGold(object):
 
         agg_grads = []
 
-        print("len(client_grads)", len(client_grads)) # 8
-        print("len(client_grads[0])", len(client_grads[0])) #2
-        print("client_grads[0]", client_grads[0]) # 'fc2.weight': , 'fc2.bias':
+        # print("len(client_grads)", len(client_grads)) # 8
+        # print("len(client_grads[0])", len(client_grads[0])) #2
+        # print("client_grads[0]", client_grads[0]) # 'fc2.weight': , 'fc2.bias':
         # print("client_grads[0]['fc2.weight']", client_grads[0]['fc2.weight'])
-        print("client_grads[0]['fc2.weight'].size()", client_grads[0]['fc2.weight'].size()) #[10,784]
+        # print("client_grads[0]['fc2.weight'].size()", client_grads[0]['fc2.weight'].size()) #[10,784]
 
         # Iterate through each layer
         for j in range(len(client_grads)):
             temp_W = []
             temp_B = []
-            for i in range(len(client_grads[0]['fc2.weight'])):
+            for i in range(len(client_grads[0][1])):
                 assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
                 # print("wv[0]", wv[0]) # 0.0
 
                 # temp = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
-                temp_w = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
-                temp_b = wv[0] * torch.tensor(client_grads[j]['fc2.bias'][i]).cpu().clone()
+                temp_w = wv[0] * torch.tensor(client_grads[j][0][i]).cpu().clone()
+                temp_b = wv[0] * torch.tensor(client_grads[j][1][i]).cpu().clone()
                 # Aggregate gradients for a layer
                 for c, client_grad in enumerate(client_grads):
                     if c == 0:
@@ -862,8 +864,8 @@ class FoolsGold(object):
                     # temp += wv[c] * torch.tensor(client_grad['fc2.weight'][i]).cpu()
                     # print("wv[c]: ", wv[c]) #0.0
                     # print("client_grad['fc2.weight'][i]: ", client_grad['fc2.weight'][i])
-                    temp_w += wv[c] * torch.tensor(client_grad['fc2.weight'][i]).cpu()
-                    temp_b += wv[c] * torch.tensor(client_grad['fc2.bias'][i]).cpu()
+                    temp_w += wv[c] * torch.tensor(client_grad[0][i]).cpu()
+                    temp_b += wv[c] * torch.tensor(client_grad[1][i]).cpu()
                 temp_w = temp_w / len(client_grads)
                 temp_b = temp_b / len(client_grads)
 
