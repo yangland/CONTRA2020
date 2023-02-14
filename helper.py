@@ -388,7 +388,7 @@ class Helper:
         alphas = []
         names = []
         for name, data in updates.items():
-            # print("data[1]", data[1])
+            print("data[1]", data[1])
             # client_grads.append(data[1])  # gradient
             client_grads.append([data[1]['fc2.weight'], data[1]['fc2.bias']])  # gradient
             alphas.append(data[0])  # num_samples
@@ -413,8 +413,7 @@ class Helper:
 
         optimizer.zero_grad()
 
-
-
+        # CONTRA uses foolsgold object self.fg
         agg_grads, wv,alpha, avg_cs, cs_sorted = self.fg.aggregate_gradients(client_grads, names)
 
         for i, (name, params) in enumerate(target_model.named_parameters()):
@@ -454,7 +453,7 @@ class Helper:
 
         wv = (1 - (np.mean(cs_sorted, axis = 1))) + (np.mean(cs_sorted, axis = 1) - alpha)
         optimizer.step()
-        wv=wv.tolist()
+        wv = wv.tolist()
         utils.csv_record.add_weight_result(names, wv, alpha)
         return True, names, wv, alpha, client_grads, reputation_dict
 

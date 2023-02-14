@@ -192,7 +192,7 @@ if __name__ == '__main__':
                                                                   is_poison=helper.params['is_poison'],
                                                                   agent_name_keys=agent_name_keys)
         logger.info(f'time spent on training: {time.time() - t}')
-        
+m
         weight_accumulator, updates = helper.accumulate_weight(weight_accumulator, epochs_submit_update_dict,
                                                                agent_name_keys, num_samples_dict)
         is_updated = True
@@ -204,6 +204,7 @@ if __name__ == '__main__':
                                                       target_model=helper.target_model,
                                                       epoch_interval=helper.params['aggr_epoch_interval'])
             num_oracle_calls = 1
+
         elif helper.params['aggregation_methods'] == config.AGGR_GEO_MED:
             maxiter = helper.params['geom_median_maxiter']
             num_oracle_calls, is_updated, names, weights, alphas = helper.geometric_median_update(helper.target_model, updates, maxiter=maxiter)
@@ -230,15 +231,17 @@ if __name__ == '__main__':
             #num_oracle_calls = 1
 
 
-        # clear the weight_accumulator
+        # reputation, the highest score set up to be one
         maxr=max(reputation_dict.values())
         for k in reputation_dict:
             reputation_dict[k] = reputation_dict[k]/maxr
+
+        # clear the weight_accumulator
         weight_accumulator = helper.init_weight_accumulator(helper.target_model)
 
         temp_global_epoch = epoch + helper.params['aggr_epoch_interval'] - 1
 
-        #if helper.params['is_poison']:
+        # Test the accuracy
         epoch_loss, epoch_acc, epoch_corret, epoch_total = test.Mytest(helper=helper, epoch=temp_global_epoch,
                                                                        model=helper.target_model, is_poison=False,
                                                                        visualize=True, agent_name_key="global")
@@ -247,6 +250,7 @@ if __name__ == '__main__':
         if len(csv_record.scale_temp_one_row)>0:
             csv_record.scale_temp_one_row.append(round(epoch_acc, 4))
 
+        # If 'is_poison', test the poison accuracy
         if helper.params['is_poison']:
             epoch_loss, epoch_acc_p, epoch_corret, epoch_total = test.Mytest_poison(helper=helper,
                                                                                     epoch=temp_global_epoch,
