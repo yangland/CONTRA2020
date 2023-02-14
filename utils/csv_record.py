@@ -1,6 +1,6 @@
-
 import csv
 import copy
+
 train_fileHeader = ["local_model", "round", "epoch", "internal_epoch", "average_loss", "accuracy", "correct_data",
                     "total_data"]
 test_fileHeader = ["model", "epoch", "average_loss", "accuracy", "correct_data", "total_data"]

@@ -50,7 +50,7 @@ class Helper:
 
         self.params['current_time'] = self.current_time
         self.params['folder_path'] = self.folder_path
-        self.fg= FoolsGold(use_memory=self.params['fg_use_memory'])
+        self.fg = FoolsGold(use_memory=self.params['fg_use_memory'])
 
     def save_checkpoint(self, state, is_best, filename='checkpoint.pth.tar'):
         if not self.params['save_model']:
@@ -830,9 +830,9 @@ class FoolsGold(object):
         # self.memory += grads
 
         if self.use_memory:
-            wv, alpha,avg_cs, cs_sorted = self.foolsgold_new(self.memory)  # Use FG
+            wv, alpha, avg_cs, cs_sorted = self.foolsgold_new(self.memory)  # Use FG
         else:
-            wv, alpha, avg_cs,cs_sorted = self.foolsgold_new(grads)  # Use FG
+            wv, alpha, avg_cs, cs_sorted = self.foolsgold_new(grads)  # Use FG
         logger.info(f'[foolsgold agg] wv: {wv}')
         self.wv_history.append(wv)
 
@@ -883,7 +883,8 @@ class FoolsGold(object):
         # agg_grads_rst = torch.as_tensor(agg_grads)
         return agg_grads, wv, alpha, avg_cs, cs_sorted
 
-    def foolsgold(self,grads):
+    # function that not in use
+    def foolsgold(self, grads):
         n_clients = grads.shape[0]
         cs = smp.cosine_similarity(grads) - np.eye(n_clients)
         avg_cs = []
@@ -971,7 +972,7 @@ class FoolsGold(object):
         return agg_grads
 
 
-    def foolsgold_new(self,grads):
+    def foolsgold_new(self, grads):
         n_clients = grads.shape[0]
         cs = smp.cosine_similarity(grads) - np.eye(n_clients)
         avg_cs = []
@@ -996,7 +997,7 @@ class FoolsGold(object):
             for j in range(5):
                 good_idx_data = cs[i][good_idx[j]]
                 temp += cs[i][good_idx[j]]
-            temp = temp /5
+            temp = temp / 5
             avg_cs.append(temp)
         avg_cs = np.array(avg_cs)
         maxcs = 1 - (np.max(cs, axis = 1))
@@ -1035,4 +1036,4 @@ class FoolsGold(object):
         wv[(wv < (0 + epsilon))] = 0
 
         # wv is the weight
-        return wv,alpha, avg_cs, cs_sorted
+        return wv, alpha, avg_cs, cs_sorted

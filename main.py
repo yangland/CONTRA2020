@@ -148,6 +148,7 @@ if __name__ == '__main__':
         agent_name_keys = helper.participants_list
         adversarial_name_keys = []
 
+        # Select FL agents for this training round
         if helper.params['is_random_namelist']:
             if helper.params['is_random_adversary']:  # random choose , maybe don't have adversarial
                 total = sum(reputation_dict.values(), 0.0)
@@ -192,12 +193,12 @@ if __name__ == '__main__':
                                                                   is_poison=helper.params['is_poison'],
                                                                   agent_name_keys=agent_name_keys)
         logger.info(f'time spent on training: {time.time() - t}')
-m
+        # New weight_accumulator
         weight_accumulator, updates = helper.accumulate_weight(weight_accumulator, epochs_submit_update_dict,
                                                                agent_name_keys, num_samples_dict)
         is_updated = True
 
-        # Switch between different aggregators
+        # Switch between different aggregators, take updates from previous step
         if helper.params['aggregation_methods'] == config.AGGR_MEAN:
             # Average the models
             is_updated = helper.average_shrink_models(weight_accumulator=weight_accumulator,
@@ -225,7 +226,7 @@ m
 
         elif helper.params['aggregation_methods'] == config.AGGR_CONTRA:
             # Yang: return True, names, wv, alpha, client_grads, reputation_dict
-            is_updated, names, wv, alpha, client_grads,reputation_dict = helper.contra_update(helper.target_model, updates, reputation_dict)
+            is_updated, names, wv, alpha, client_grads, reputation_dict = helper.contra_update(helper.target_model, updates, reputation_dict)
             #vis_agg_weight(helper,names,weights,epoch,vis,adversarial_name_keys)
             #vis_fg_alpha(helper,names,alphas,epoch,vis,adversarial_name_keys )
             #num_oracle_calls = 1
@@ -262,10 +263,10 @@ m
             csv_record.posiontest_result.append(
                 ["global", temp_global_epoch, epoch_loss, epoch_acc_p, epoch_corret, epoch_total])
 
-
             # test on local triggers
             csv_record.poisontriggertest_result.append(
                 ["global", "combine", "", temp_global_epoch, epoch_loss, epoch_acc_p, epoch_corret, epoch_total])
+
             if helper.params['vis_trigger_split_test']:
                 helper.target_model.trigger_agent_test_vis(vis=vis, epoch=epoch, acc=epoch_acc_p, loss=None,
                                                            eid=helper.params['environment_name'],
@@ -282,11 +283,8 @@ m
         logger.info(f'Done in {time.time() - start_time} sec.')
         csv_record.save_result_csv(epoch, helper.params['is_poison'], helper.folder_path)
 
-
-
     logger.info('Saving all the graphs.')
     logger.info(f"This run has a label: {helper.params['current_time']}. "
                 f"Visdom environment: {helper.params['environment_name']}")
-
 
     vis.save([helper.params['environment_name']])
