@@ -318,8 +318,8 @@ for n_participants, sample_size_cap in participant_rounds:
 
 				if not use_reputation:
 					if use_fedavg:
-					for gradient, weight in zip(gradients, relative_shard_sizes):
-						add_gradient_updates(aggregated_gradient, gradient, weight=weight)
+						for gradient, weight in zip(gradients, relative_shard_sizes):
+							add_gradient_updates(aggregated_gradient, gradient, weight=weight)
 					else: # foolsgold -- initial
 
 						for gradient, weight in zip(gradient, relative_shard_sizes):

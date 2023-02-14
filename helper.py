@@ -22,49 +22,6 @@ import utils.csv_record
 import main
 
 
-def get_krum_scores(grads, groupsize):
-    krum_scores = np.zeros(len(grads))
-    cur_time = time.time()
-    num_clients = len(grads)
-    #grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod()
-    #grads = np.zeros((num_clients, grad_len))
-
-    #for i in range(len(client_grads)):
-        #grads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
-
-    #for i in range (len(X)):
-        #for name, data in X[i].items():
-            #print (name)
-            #if name == 'fc.weight':
-                #detached_data= data.cpu().detach().numpy()
-            # print(detached_data.shape)
-            #detached_data=detached_data.tolist()
-            # print(detached_data)
-                #X_list.append(detached_data)
-            #X_list = np.array(X_list)
-    #X_list1 =np.array(X_list)
-    squared_grads = [x**2 for x in grads]
-    #distances = torch.sum(torch.pow(X_list, 2)) + torch.sum(torch.pow(X_list,2)) -2 * np.dot(X_list1, X_list1.T)
-    distances = np.sum(squared_grads, axis =1)+ np.sum(squared_grads, axis = 1)- 2 * np.dot(grads, grads.T)
-    #print(distances)
-
-    #return math.sqrt(squared_sum)
-        #for name, layer in X[i].items():
-            #print(name)
-            #data = data.numpy()
-            #X_list1.append([x for x in layer.data])
-            #X_list2.append([x**2 for x in layer.data])
-    #X_list1= np.array(X_list1)
-    #X_list2 = np.array(X_list2)#for name, data in updates.items():
-        #client_grads.append(data[1])  # gradient
-        #alphas.append(data[0])  # num_samples
-        #names.append(name)X = [x**2 for x in X]X = [x**2 for x in X]
-    #distances = np.sum(X_list2, axis =0)[:,None]+ np.sum(X_list2, axis = 0)[None] - (2 * np.dot(X_list,X_list.T))
-    for i in range(len(grads)):
-        krum_scores[i] = np.sum(np.sort(distances[i])[1:(groupsize - 1)])
-    return krum_scores
-
-
 class Helper:
     def __init__(self, current_time, params, name):
         self.current_time = current_time
@@ -301,11 +258,11 @@ class Helper:
 
         return weight_accumulator
 
-
+    # Aggregation Methods
+    # 'mean'
     def average_shrink_models(self, weight_accumulator, target_model, epoch_interval):
         """
         Perform FedAvg algorithm and perform some clustering on top of it.
-
         """
         for name, data in target_model.state_dict().items():
             if self.params.get('tied', False) and name == 'decoder.weight':
@@ -313,16 +270,16 @@ class Helper:
 
             update_per_layer = weight_accumulator[name] * (self.params["eta"] / self.params["no_models"])
             # update_per_layer = weight_accumulator[name] * (self.params["eta"] / self.params["number_of_total_participants"])
-
             # update_per_layer = update_per_layer * 1.0 / epoch_interval
+
             if self.params['diff_privacy']:
                 update_per_layer.add_(self.dp_noise(data, self.params['sigma']))
 
             data.add_(update_per_layer)
         return True
 
-
-    def krum_update (self,target_model,updates,clip):
+    # 'krum'
+    def krum_update (self, target_model, updates, clip):
         client_grads = []
         alphas = []
         names = []
@@ -381,9 +338,9 @@ class Helper:
         #wv=wv.tolist()
         #utils.csv_record.add_weight_result(names, wv, alpha)
         #client_grads=torch.from_numpy(client_grads).float()
-        return True, names,client_grads
+        return True, names, client_grads
 
-
+    # 'foolsgold'
     def foolsgold_update(self,target_model,updates):
         client_grads = []
         alphas = []
@@ -501,7 +458,7 @@ class Helper:
         utils.csv_record.add_weight_result(names, wv, alpha)
         return True, names, wv, alpha, client_grads, reputation_dict
 
-
+    # 'geom_median'
     def geometric_median_update(self, target_model, updates, maxiter=4, eps=1e-5, verbose=False, ftol=1e-6, max_update_norm= None):
         """Computes geometric median of atoms with weights alphas using Weiszfeld's Algorithm
                """
@@ -606,9 +563,9 @@ class Helper:
         for alpha, p in zip(alphas, points):
             temp_sum += alpha * Helper.l2dist(median, p)
         return temp_sum
-
         # return sum([alpha * Helper.l2dist(median, p) for alpha, p in zip(alphas, points)])
 
+    # Utility Functions
     @staticmethod
     def weighted_average_oracle(points, weights):
         """Computes weighted average of atoms with specified weights
@@ -796,6 +753,49 @@ class Helper:
         main.logger.info('Average loss: {:.4f}'.format(total_l))
         model.train()
         return (total_l)
+
+# Aggregator Functions
+def get_krum_scores(grads, groupsize):
+    krum_scores = np.zeros(len(grads))
+    cur_time = time.time()
+    num_clients = len(grads)
+    #grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod()
+    #grads = np.zeros((num_clients, grad_len))
+
+    #for i in range(len(client_grads)):
+        #grads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
+
+    #for i in range (len(X)):
+        #for name, data in X[i].items():
+            #print (name)
+            #if name == 'fc.weight':
+                #detached_data= data.cpu().detach().numpy()
+            # print(detached_data.shape)
+            #detached_data=detached_data.tolist()
+            # print(detached_data)
+                #X_list.append(detached_data)
+            #X_list = np.array(X_list)
+    #X_list1 =np.array(X_list)
+    squared_grads = [x**2 for x in grads]
+    #distances = torch.sum(torch.pow(X_list, 2)) + torch.sum(torch.pow(X_list,2)) -2 * np.dot(X_list1, X_list1.T)
+    distances = np.sum(squared_grads, axis =1)+ np.sum(squared_grads, axis = 1)- 2 * np.dot(grads, grads.T)
+    #print(distances)
+
+    #return math.sqrt(squared_sum)
+        #for name, layer in X[i].items():
+            #print(name)
+            #data = data.numpy()
+            #X_list1.append([x for x in layer.data])
+            #X_list2.append([x**2 for x in layer.data])
+    #X_list1= np.array(X_list1)
+    #X_list2 = np.array(X_list2)#for name, data in updates.items():
+        #client_grads.append(data[1])  # gradient
+        #alphas.append(data[0])  # num_samples
+        #names.append(name)X = [x**2 for x in X]X = [x**2 for x in X]
+    #distances = np.sum(X_list2, axis =0)[:,None]+ np.sum(X_list2, axis = 0)[None] - (2 * np.dot(X_list,X_list.T))
+    for i in range(len(grads)):
+        krum_scores[i] = np.sum(np.sort(distances[i])[1:(groupsize - 1)])
+    return krum_scores
 
 class FoolsGold(object):
     def __init__(self, use_memory=False):

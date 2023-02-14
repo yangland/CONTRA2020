@@ -116,9 +116,11 @@ if __name__ == '__main__':
     helper.create_model()
     logger.info(f'create model done')
     ### Create models
-    reputation_dict = { i: 1  for i in range(0, 100)}
 
+    # initial the reputation dictionary, the initial reputation score == 1
+    reputation_dict = { i: 1  for i in range(0, 100)}
     print(reputation_dict)
+
     if helper.params['is_poison']:
         logger.info(f"Poisoned following participants: {(helper.params['adversary_list'])}")
 
@@ -139,19 +141,20 @@ if __name__ == '__main__':
     sorted_dict = {}
     f = 0.1
 
+    # One Training Loop
     for epoch in range(helper.start_epoch, helper.params['epochs'] + 1, helper.params['aggr_epoch_interval']):
         start_time = time.time()
         t = time.time()
-
         agent_name_keys = helper.participants_list
         adversarial_name_keys = []
+
         if helper.params['is_random_namelist']:
-            if helper.params['is_random_adversary']:  # random choose , maybe don't have advasarial
-                total = sum(reputation_dict.values(),0.0)
+            if helper.params['is_random_adversary']:  # random choose , maybe don't have adversarial
+                total = sum(reputation_dict.values(), 0.0)
                 reputation_dict = {k: v / total for k, v in reputation_dict.items()}
-                sorted_keys = sorted(reputation_dict,key = reputation_dict.get, reverse=True)
+                sorted_keys = sorted(reputation_dict, key = reputation_dict.get, reverse=True)
                 for w in sorted_keys:
-                    sorted_dict[w] = (reputation_dict[w] * f* (1-f)) +f
+                    sorted_dict[w] = (reputation_dict[w] * f * (1-f)) + f
                 key_list = list(sorted_dict.keys())
                 value_list = list(sorted_dict.values())
                 agent_name_keys = random.choices(key_list, weights=value_list, k=10)
@@ -162,7 +165,7 @@ if __name__ == '__main__':
                 for _name_keys in agent_name_keys:
                     if _name_keys in helper.params['adversary_list']:
                         adversarial_name_keys.append(_name_keys)
-            else:  # must have advasarial if this epoch is in their poison epoch
+            else:  # must have adversarial if this epoch is in their poison epoch
                 ongoing_epochs = list(range(epoch, epoch + helper.params['aggr_epoch_interval']))
                 for idx in range(0, len(helper.params['adversary_list'])):
                     for ongoing_epoch in ongoing_epochs:
@@ -181,15 +184,20 @@ if __name__ == '__main__':
             if helper.params['is_random_adversary']==False:
                 adversarial_name_keys=copy.deepcopy(helper.params['adversary_list'])
         logger.info(f'Server Epoch:{epoch} choose agents : {agent_name_keys}.')
+
+        # Training
         epochs_submit_update_dict, num_samples_dict = train.train(helper=helper, start_epoch=epoch,
                                                                   local_model=helper.local_model,
                                                                   target_model=helper.target_model,
                                                                   is_poison=helper.params['is_poison'],
                                                                   agent_name_keys=agent_name_keys)
         logger.info(f'time spent on training: {time.time() - t}')
+        
         weight_accumulator, updates = helper.accumulate_weight(weight_accumulator, epochs_submit_update_dict,
                                                                agent_name_keys, num_samples_dict)
         is_updated = True
+
+        # Switch between different aggregators
         if helper.params['aggregation_methods'] == config.AGGR_MEAN:
             # Average the models
             is_updated = helper.average_shrink_models(weight_accumulator=weight_accumulator,
@@ -213,8 +221,9 @@ if __name__ == '__main__':
             #vis_agg_weight(helper,names,weights,epoch,vis,adversarial_name_keys)
             #vis_fg_alpha(helper,names,alphas,epoch,vis,adversarial_name_keys )
             #num_oracle_calls = 1
+
         elif helper.params['aggregation_methods'] == config.AGGR_CONTRA:
-            # return True, names, wv, alpha, client_grads, reputation_dict
+            # Yang: return True, names, wv, alpha, client_grads, reputation_dict
             is_updated, names, wv, alpha, client_grads,reputation_dict = helper.contra_update(helper.target_model, updates, reputation_dict)
             #vis_agg_weight(helper,names,weights,epoch,vis,adversarial_name_keys)
             #vis_fg_alpha(helper,names,alphas,epoch,vis,adversarial_name_keys )
@@ -239,15 +248,12 @@ if __name__ == '__main__':
             csv_record.scale_temp_one_row.append(round(epoch_acc, 4))
 
         if helper.params['is_poison']:
-
             epoch_loss, epoch_acc_p, epoch_corret, epoch_total = test.Mytest_poison(helper=helper,
                                                                                     epoch=temp_global_epoch,
                                                                                     model=helper.target_model,
                                                                                     is_poison=True,
                                                                                     visualize=True,
                                                                                     agent_name_key="global")
-
-
 
             csv_record.posiontest_result.append(
                 ["global", temp_global_epoch, epoch_loss, epoch_acc_p, epoch_corret, epoch_total])
