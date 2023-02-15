@@ -803,7 +803,7 @@ class FoolsGold(object):
         self.wv_history = []
         self.use_memory = use_memory
 
-    def aggregate_gradients(self,client_grads,names):
+    def aggregate_gradients(self, client_grads, names):
         cur_time = time.time()
         num_clients = len(client_grads)
 
@@ -833,6 +833,7 @@ class FoolsGold(object):
             wv, alpha, avg_cs, cs_sorted = self.foolsgold_new(self.memory)  # Use FG
         else:
             wv, alpha, avg_cs, cs_sorted = self.foolsgold_new(grads)  # Use FG
+
         logger.info(f'[foolsgold agg] wv: {wv}')
         self.wv_history.append(wv)
 
@@ -954,7 +955,7 @@ class FoolsGold(object):
         # wv is the weight
         return wv,alpha
 
-    def exc_one(self,ex_cl,wv,client_grads):
+    def exc_one(self, ex_cl, wv, client_grads):
         agg_grads = []
 
         # Iterate through each layer
@@ -974,6 +975,7 @@ class FoolsGold(object):
 
     def foolsgold_new(self, grads):
         n_clients = grads.shape[0]
+        # cs - cosine similarity
         cs = smp.cosine_similarity(grads) - np.eye(n_clients)
         avg_cs = []
         epsilon = 1E-5
@@ -986,24 +988,27 @@ class FoolsGold(object):
                     continue
                 if maxcs[i] < maxcs[j]:
                     cs[i][j] = cs[i][j] * maxcs[i] / (maxcs[j] + epsilon)
-
+        # Yang: k = 5 is not showing in the original Foolsgold
         k = 5
         losses =[]
         epsilon = 1E-5
         for i in range(n_clients):
             temp=0
             good_idx =[[]]
+            # k largest cs[i] in the good_idx
             good_idx = np.argpartition(cs[i], (n_clients - k))[(n_clients - k):n_clients]
-            for j in range(5):
+            for j in range(k):
                 good_idx_data = cs[i][good_idx[j]]
                 temp += cs[i][good_idx[j]]
-            temp = temp / 5
+            # average of the k largest cs[i][j] in cs[i]
+            temp = temp / k
             avg_cs.append(temp)
+
         avg_cs = np.array(avg_cs)
         maxcs = 1 - (np.max(cs, axis = 1))
         wv = 1 - (np.max(cs, axis=1))
 
-        cs_sorted = np.sort(cs[:,-5:], axis = 0)
+        cs_sorted = np.sort(cs[:,-k:], axis = 0)
         cs_sorted_mean = (np.mean(cs_sorted, axis = 1))
         #for i in range(len(grads)):
             #agg_grads=self.exc_one(i,wv,grads)
@@ -1015,7 +1020,7 @@ class FoolsGold(object):
             #epoch_loss2,_,_,_ = test.Mytest_lossfunc(helper=helper,model=target_model2,is_poison=False,visualize=True,agent_name_key="global")
             #loss = (epoch_loss - epoch_loss2)
             #losses.append(loss)
-        bad_idx_loss = np.argpartition(losses,-5)[-5:]
+        bad_idx_loss = np.argpartition(losses,-k)[-k:]
         for i in range(n_clients):
             if avg_cs[i] >=0.9 and i in bad_idx_loss:
                 wv[i] = epsilon
