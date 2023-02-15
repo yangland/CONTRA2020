@@ -817,11 +817,11 @@ class FoolsGold(object):
         #     self.memory = np.zeros((num_clients, grad_len))
         self.memory = np.zeros((num_clients, grad_len))
         grads = np.zeros((num_clients, grad_len))
-        for i in range(len(client_grads)):
 
+        for i in range(num_clients):
             # print("client_grads[i][fc2.weight]", client_grads[i]["fc2.weight"])
             # rads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
-            grads[i] = np.reshape(torch.tensor(client_grads[i][0]).detach().cpu().numpy(), (grad_len)) if len(client_grads) !=0 else 0
+            grads[i] = np.reshape(torch.tensor(client_grads[i][0]).detach().cpu().numpy(), (grad_len)) if len(client_grads) != 0 else 0
             if names[i] in self.memory_dict.keys():
                 self.memory_dict[names[i]]+=grads[i]
             else:
@@ -835,8 +835,10 @@ class FoolsGold(object):
             wv, alpha, avg_cs, cs_sorted = self.foolsgold_new(grads)  # Use FG
 
         logger.info(f'[foolsgold agg] wv: {wv}')
+
         self.wv_history.append(wv)
 
+        # Get agg_grads from the results from self.foolsgold_new
         agg_grads = []
 
         # print("len(client_grads)", len(client_grads)) # 8
@@ -852,7 +854,6 @@ class FoolsGold(object):
             for i in range(len(client_grads[0][1])):
                 assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
                 # print("wv[0]", wv[0]) # 0.0
-
                 # temp = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
                 temp_w = wv[0] * torch.tensor(client_grads[j][0][i]).cpu().clone()
                 temp_b = wv[0] * torch.tensor(client_grads[j][1][i]).cpu().clone()
@@ -879,7 +880,6 @@ class FoolsGold(object):
             agg_grads.append(stacked_temp_b)
 
         # print("agg_grads size", len(agg_grads), "*", len(agg_grads[0]), "*", len(agg_grads[0][0])) # 8 * 10 * 784
-
         # print('model aggregation took {}s'.format(time.time() - cur_time))
         # agg_grads_rst = torch.as_tensor(agg_grads)
         return agg_grads, wv, alpha, avg_cs, cs_sorted
@@ -955,6 +955,7 @@ class FoolsGold(object):
         # wv is the weight
         return wv,alpha
 
+    # function that not in use
     def exc_one(self, ex_cl, wv, client_grads):
         agg_grads = []
 
