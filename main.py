@@ -113,9 +113,9 @@ if __name__ == '__main__':
         helper = None
 
     logger.info(f'load data done')
+    ### Create models
     helper.create_model()
     logger.info(f'create model done')
-    ### Create models
 
     # initial the reputation dictionary, the initial reputation score == 1
     reputation_dict = { i: 1  for i in range(0, 100)}
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     sorted_dict = {}
     f = 0.1
 
-    # One Training Loop
+    # One Master Training/Testing Loop
     for epoch in range(helper.start_epoch, helper.params['epochs'] + 1, helper.params['aggr_epoch_interval']):
         start_time = time.time()
         t = time.time()

@@ -238,7 +238,7 @@ class ImageHelper(Helper):
         logger.info('train loaders done')
         self.train_data = train_loaders
         self.test_data = self.get_test()
-        self.test_data_poison ,self.test_targetlabel_data = self.poison_test_dataset()
+        self.test_data_poison, self.test_targetlabel_data = self.poison_test_dataset()
 
         self.advasarial_namelist = self.params['adversary_list']
 

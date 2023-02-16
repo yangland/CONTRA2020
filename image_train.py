@@ -9,7 +9,7 @@ import copy
 import config
 
 
-def ImageTrain(helper, start_epoch, local_model, target_model, is_poison,agent_name_keys):
+def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_name_keys):
 
     epochs_submit_update_dict = dict()
     num_samples_dict = dict()
@@ -111,7 +111,7 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison,agent_n
                             dis2global_list.append(distance_to_global_model)
                             model.track_distance_batch_vis(vis=main.vis, epoch=temp_local_epoch,
                                                            data_len=temp_data_len,
-                                                            batch=batch_id,distance_to_global_model= distance_to_global_model,
+                                                            batch=batch_id, distance_to_global_model = distance_to_global_model,
                                                            eid=helper.params['environment_name'],
                                                            name=str(agent_name_key),is_poisoned=True)
 
@@ -189,6 +189,7 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison,agent_n
                                  f"adversaries is: {helper.model_global_norm(model)}. distance: {distance}")
 
             else:
+                # no poisoning
                 temp_local_epoch = (epoch - 1) * helper.params['internal_epochs']
                 for internal_epoch in range(1, helper.params['internal_epochs'] + 1):
                     temp_local_epoch += 1
