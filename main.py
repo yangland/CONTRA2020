@@ -186,7 +186,7 @@ if __name__ == '__main__':
                 adversarial_name_keys=copy.deepcopy(helper.params['adversary_list'])
         logger.info(f'Server Epoch:{epoch} choose agents : {agent_name_keys}.')
 
-        # Training
+        # Training, train.train from train.py, image_train.py
         epochs_submit_update_dict, num_samples_dict = train.train(helper=helper, start_epoch=epoch,
                                                                   local_model=helper.local_model,
                                                                   target_model=helper.target_model,

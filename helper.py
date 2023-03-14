@@ -254,7 +254,8 @@ class Helper:
     def init_weight_accumulator(self, target_model):
         weight_accumulator = dict()
         for name, data in target_model.state_dict().items():
-            weight_accumulator[name] = torch.zeros_like(torch.tensor(data))
+            # print ("data257: ", data)
+            weight_accumulator[name] = torch.zeros_like(data.clone().detach())
 
         return weight_accumulator
 
@@ -811,7 +812,10 @@ class FoolsGold(object):
         # print("client_grads[0]", client_grads[0])
 
         # grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod()
-        grad_len = np.array(torch.tensor(client_grads[0][0]).cpu().data.numpy().shape).prod()
+        # print("client_grads[0][0] size: ", client_grads[0][0].size()) # a tensor
+        # grad_len = np.array(torch.tensor(client_grads[0][0]).cpu().data.numpy().shape).prod()
+        grad_len = np.asarray((client_grads[0][0].cpu().detach().numpy().shape)).prod()
+        # print("grad_len", grad_len) # 7840
 
         # if self.memory is None:
         #     self.memory = np.zeros((num_clients, grad_len))
@@ -821,7 +825,7 @@ class FoolsGold(object):
         for i in range(num_clients):
             # print("client_grads[i][fc2.weight]", client_grads[i]["fc2.weight"])
             # rads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
-            grads[i] = np.reshape(torch.tensor(client_grads[i][0]).detach().cpu().numpy(), (grad_len)) if len(client_grads) != 0 else 0
+            grads[i] = np.reshape(client_grads[i][0].detach().cpu().numpy(), (grad_len)) if len(client_grads) != 0 else 0
             if names[i] in self.memory_dict.keys():
                 self.memory_dict[names[i]]+=grads[i]
             else:
@@ -855,8 +859,9 @@ class FoolsGold(object):
                 assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
                 # print("wv[0]", wv[0]) # 0.0
                 # temp = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
-                temp_w = wv[0] * torch.tensor(client_grads[j][0][i]).cpu().clone()
-                temp_b = wv[0] * torch.tensor(client_grads[j][1][i]).cpu().clone()
+                # temp_b = wv[0] * torch.tensor(client_grads[j][1][i]).cpu().clone()
+                temp_w = wv[0] * client_grads[j][0][i].cpu().clone()
+                temp_b = wv[0] * client_grads[j][1][i].cpu().clone()
                 # Aggregate gradients for a layer
                 for c, client_grad in enumerate(client_grads):
                     if c == 0:
@@ -865,8 +870,8 @@ class FoolsGold(object):
                     # temp += wv[c] * torch.tensor(client_grad['fc2.weight'][i]).cpu()
                     # print("wv[c]: ", wv[c]) #0.0
                     # print("client_grad['fc2.weight'][i]: ", client_grad['fc2.weight'][i])
-                    temp_w += wv[c] * torch.tensor(client_grad[0][i]).cpu()
-                    temp_b += wv[c] * torch.tensor(client_grad[1][i]).cpu()
+                    temp_w += wv[c] * client_grad[0][i].cpu().clone()
+                    temp_b += wv[c] * client_grad[1][i].cpu().clone()
                 temp_w = temp_w / len(client_grads)
                 temp_b = temp_b / len(client_grads)
 
@@ -977,6 +982,7 @@ class FoolsGold(object):
     def foolsgold_new(self, grads):
         n_clients = grads.shape[0]
         # cs - cosine similarity
+        # print("grads shape:", grads.shape) (9, 7840)
         cs = smp.cosine_similarity(grads) - np.eye(n_clients)
         avg_cs = []
         epsilon = 1E-5

@@ -18,6 +18,7 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
         if temp_name in helper.params['adversary_list']:
             current_number_of_adversaries+=1
 
+    # All selected clients' local model
     for model_id in range(helper.params['no_models']):
         epochs_local_update_list = []
         last_local_model = dict()
@@ -47,15 +48,18 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
             if len(helper.params['adversary_list']) == 1:
                 adversarial_index = -1  # the global pattern
 
+        # In an epoch interval
         for epoch in range(start_epoch, start_epoch + helper.params['aggr_epoch_interval']):
 
             target_params_variables = dict()
             for name, param in target_model.named_parameters():
                 target_params_variables[name] = last_local_model[name].clone().detach().requires_grad_(False)
 
+            # poisoning
             if is_poison and agent_name_key in helper.params['adversary_list'] and (epoch in localmodel_poison_epochs):
                 main.logger.info('poison_now')
 
+                # loading poisoning parameters
                 poison_lr = helper.params['poison_lr']
                 internal_epoch_num = helper.params['internal_poison_epochs']
                 step_lr = helper.params['poison_step_lr']
@@ -66,7 +70,9 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                 scheduler = torch.optim.lr_scheduler.MultiStepLR(poison_optimizer,
                                                                  milestones=[0.2 * internal_epoch_num,
                                                                              0.8 * internal_epoch_num], gamma=0.1)
-                temp_local_epoch = (epoch - 1) *internal_epoch_num
+                temp_local_epoch = (epoch - 1) * internal_epoch_num
+
+                # poison training
                 for internal_epoch in range(1, internal_epoch_num + 1):
                     temp_local_epoch += 1
                     _, data_iterator = helper.train_data[agent_name_key]
@@ -76,7 +82,7 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                     dataset_size = 0
                     dis2global_list=[]
                     for batch_id, batch in enumerate(data_iterator):
-                        data, targets, poison_num = helper.get_poison_batch(batch, adversarial_index=adversarial_index,evaluation=False)
+                        data, targets, poison_num = helper.get_poison_batch(batch, adversarial_index=adversarial_index, evaluation=False)
                         poison_optimizer.zero_grad()
                         dataset_size += len(data)
                         poison_data_count += poison_num
