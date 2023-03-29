@@ -87,6 +87,7 @@ class ImageHelper(Helper):
             Sample Method: take a uniformly sampled 10-dimension vector as parameters for
             dirichlet distribution to sample number of images in each class.
         """
+        # no_participants = 100
 
         cifar_classes = self.classes_dict
         class_size = len(cifar_classes[0]) #for cifar: 5000

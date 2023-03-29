@@ -312,7 +312,10 @@ class Helper:
         grads = np.zeros((num_clients, grad_len))
 
         for i in range(len(client_grads)):
-            grads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
+            if len(client_grads) != 0 and len(client_grads[i])!=0 :
+                grads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len))
+            else:
+                grads[i] = 0
         scores = get_krum_scores(grads,n - clip)
         good_idx = np.argpartition(scores, n - clip)[:(n - clip)]
         print('good_idx', good_idx)
@@ -822,10 +825,21 @@ class FoolsGold(object):
         self.memory = np.zeros((num_clients, grad_len))
         grads = np.zeros((num_clients, grad_len))
 
+        # print("client_grads[6]", client_grads[6])
+
         for i in range(num_clients):
             # print("client_grads[i][fc2.weight]", client_grads[i]["fc2.weight"])
             # rads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) if len(client_grads) !=0 else 0
-            grads[i] = np.reshape(client_grads[i][0].detach().cpu().numpy(), (grad_len)) if len(client_grads) != 0 else 0
+            # issue: list index out of range
+            # print("len(client_grads)", len(client_grads)) # 8
+            # print("grads shape", grads.shape) # (8, 7840)
+            if len(client_grads) != 0 and len(client_grads[i]) != 0: # Yang added "is not None" in case client_grads is None when alpha is too small
+                # print("i", i)
+                # print(client_grads[i][0].size())
+                grads[i] = np.reshape(client_grads[i][0].detach().cpu().numpy(), (grad_len))
+            else:
+                grads[i] = 0
+
             if names[i] in self.memory_dict.keys():
                 self.memory_dict[names[i]]+=grads[i]
             else:
@@ -860,8 +874,12 @@ class FoolsGold(object):
                 # print("wv[0]", wv[0]) # 0.0
                 # temp = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
                 # temp_b = wv[0] * torch.tensor(client_grads[j][1][i]).cpu().clone()
-                temp_w = wv[0] * client_grads[j][0][i].cpu().clone()
-                temp_b = wv[0] * client_grads[j][1][i].cpu().clone()
+                if len(client_grads[j])!=0: # Yang updated for client_grads empty
+                    temp_w = wv[0] * client_grads[j][0][i].cpu().clone()
+                    temp_b = wv[0] * client_grads[j][1][i].cpu().clone()
+                else:
+                    temp_w = 0
+                    temp_b = 0
                 # Aggregate gradients for a layer
                 for c, client_grad in enumerate(client_grads):
                     if c == 0:
@@ -870,8 +888,11 @@ class FoolsGold(object):
                     # temp += wv[c] * torch.tensor(client_grad['fc2.weight'][i]).cpu()
                     # print("wv[c]: ", wv[c]) #0.0
                     # print("client_grad['fc2.weight'][i]: ", client_grad['fc2.weight'][i])
-                    temp_w += wv[c] * client_grad[0][i].cpu().clone()
-                    temp_b += wv[c] * client_grad[1][i].cpu().clone()
+                    if len(client_grad)!=0: # Yang added
+                        temp_w += wv[c] * client_grad[0][i].cpu().clone()
+                        temp_b += wv[c] * client_grad[1][i].cpu().clone()
+                    else:
+                        continue
                 temp_w = temp_w / len(client_grads)
                 temp_b = temp_b / len(client_grads)
 

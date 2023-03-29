@@ -126,7 +126,8 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                         main.logger.info(f'Current lr: {scheduler.get_lr()}')
 
                     acc = 100.0 * (float(correct) / float(dataset_size))
-                    total_l = total_loss / dataset_size
+                    # total_l = total_loss / dataset_size
+                    total_l = total_loss / dataset_size if dataset_size != 0 else torch.tensor(0, device='cuda:0')  # Yang updated for 0 dataset_size
                     main.logger.info(
                         '___PoisonTrain {} ,  epoch {:3d}, local model {}, internal_epoch {:3d},  Average loss: {:.4f}, '
                         'Accuracy: {}/{} ({:.4f}%), train_poison_data_count: {}'.format(model.name, epoch, agent_name_key,
@@ -251,7 +252,8 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                                                            name=str(agent_name_key),is_poisoned=False)
 
                     acc = 100.0 * (float(correct) / float(dataset_size)) if dataset_size !=0 else 0
-                    total_l = total_loss / dataset_size if dataset_size !=0 else 0
+                    total_l = total_loss / dataset_size if dataset_size !=0 else torch.tensor(0, device='cuda:0') # Yang updated for 0 dataset_size
+
                     main.logger.info(
                         '___Train {},  epoch {:3d}, local model {}, internal_epoch {:3d},  Average loss: {:.4f}, '
                         'Accuracy: {}/{} ({:.4f}%)'.format(model.name, epoch, agent_name_key, internal_epoch,
@@ -261,6 +263,7 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                                                     epoch, internal_epoch, total_l, acc, correct, dataset_size])
 
                     if helper.params['vis_train']:
+                        # print("total_l", total_l)
                         model.train_vis(main.vis, temp_local_epoch,
                                         acc, loss=total_l, eid=helper.params['environment_name'], is_poisoned=False,
                                         name=str(agent_name_key))
