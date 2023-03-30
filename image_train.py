@@ -136,7 +136,8 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                                                                                      acc, poison_data_count))
                     csv_record.train_result.append(
                         [agent_name_key, temp_local_epoch,
-                         epoch, internal_epoch, total_l.item(), acc, correct, dataset_size])
+                            # epoch, internal_epoch, total_l.item(), acc, correct, dataset_size]) # Yang .item() output tensor, which should be float.
+                            epoch, internal_epoch, total_l.cpu().numpy(), acc, correct, dataset_size])
                     if helper.params['vis_train']:
                         model.train_vis(main.vis, temp_local_epoch,
                                         acc, loss=total_l, eid=helper.params['environment_name'], is_poisoned=True,
@@ -260,7 +261,7 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                                                            total_l, correct, dataset_size,
                                                            acc))
                     csv_record.train_result.append([agent_name_key, temp_local_epoch,
-                                                    epoch, internal_epoch, total_l, acc, correct, dataset_size])
+                                                    epoch, internal_epoch, total_l.cpu().numpy(), acc, correct, dataset_size]) # Yang updated total_l to total_l.cpu().numpy()
 
                     if helper.params['vis_train']:
                         # print("total_l", total_l)
