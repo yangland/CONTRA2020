@@ -278,7 +278,7 @@ class Helper:
 
             if self.params['diff_privacy']:
                 update_per_layer.add_(self.dp_noise(data, self.params['sigma']))
-
+            data = data.double()
             data.add_(update_per_layer)
         return True
 
@@ -547,7 +547,11 @@ class Helper:
                     update_per_layer.add_(self.dp_noise(data, self.params['sigma']))
                 # Yang added
                 data = data.to(config.device)
-                data.add_(update_per_layer)
+
+                # print("geometric_median_update data:", data)
+                # print("update_per_layer", update_per_layer)
+                data = data.double()
+                data.add_(update_per_layer) # Yang added for RuntimeError: result type Float can't be cast to the desired output type Long
             is_updated = True
         else:
             logger.info('\t\t\tUpdate norm = {} is too large. Update rejected'.format(update_norm))
@@ -595,7 +599,7 @@ class Helper:
         weighted_updates= dict()
 
         for name, data in points[0].items():
-            weighted_updates[name]=  torch.zeros_like(torch.tensor(data))
+            weighted_updates[name]=  torch.zeros_like(torch.as_tensor(data))
         for w, p in zip(weights, points): # 对每一个agent
             for name, data in weighted_updates.items():
                 temp = (w / tot_weights).float().to(config.device)
