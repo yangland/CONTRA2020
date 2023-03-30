@@ -6,14 +6,14 @@ poison_lr: 0.05
 momentum: 0.9
 decay: 0.0005
 batch_size: 64
-epochs: 300
+epochs: 2 # 300
 internal_epochs: 2
 internal_poison_epochs: 2
 internal_poison_clean_epochs: 0
 poisoning_per_batch: 64
 aggr_epoch_interval: 1
-# aggregation_methods Allowed values are: [ 'mean', 'geom_median','foolsgold', 'krum', 'contra']
-aggregation_methods: 'krum'
+# aggregation_methods Allowed values are: [ 'mean', 'geom_median', 'foolsgold', 'krum', 'contra']
+aggregation_methods: 'contra'
 geom_median_maxiter: 10
 fg_use_memory: false
 participants_namelist: [0,1,2,3,4,5,6,7,8,9] # not used when is_random_namelist == true
@@ -26,7 +26,7 @@ baseline: false
 scale_weights_poison: 100
 eta: 0.1
 sampling_dirichlet: true
-dirichlet_alpha: 0.08
+dirichlet_alpha: 10 # 0.08
 poison_label_swap: 9
 # distributed attackers: (training img num : 526 - 527 - 496 - 546)
 adversary_list: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33]

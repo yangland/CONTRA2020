@@ -97,7 +97,8 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                         loss.backward()
 
                         # get gradients
-                        if helper.params['aggregation_methods']==config.AGGR_FOOLSGOLD or helper.params['aggregation_methods']==config.AGGR_KRUM:
+                        if helper.params['aggregation_methods']==config.AGGR_FOOLSGOLD or helper.params['aggregation_methods']==config.AGGR_KRUM \
+                                or helper.params['aggregation_methods']==config.AGGR_CONTRA:
                             for i, (name, params) in enumerate(model.named_parameters()):
                                 if params.requires_grad:
                                     if internal_epoch == 1 and batch_id == 0:
@@ -218,7 +219,8 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                         loss.backward()
 
                         # get gradients
-                        if helper.params['aggregation_methods'] == config.AGGR_FOOLSGOLD or helper.params['aggregation_methods']==config.AGGR_KRUM:
+                        if helper.params['aggregation_methods']==config.AGGR_FOOLSGOLD or helper.params['aggregation_methods']==config.AGGR_KRUM \
+                                or helper.params['aggregation_methods']==config.AGGR_CONTRA:
                             for i, (name, params) in enumerate(model.named_parameters()):
                                 if params.requires_grad:
                                     if internal_epoch == 1 and batch_id == 0:
@@ -316,7 +318,9 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                 local_model_update_dict[name] = (data - last_local_model[name])
                 last_local_model[name] = copy.deepcopy(data)
 
-            if helper.params['aggregation_methods'] == config.AGGR_FOOLSGOLD or helper.params['aggregation_methods'] == config.AGGR_KRUM:
+            # if helper.params['aggregation_methods'] == config.AGGR_FOOLSGOLD or helper.params['aggregation_methods'] == config.AGGR_KRUM:
+            if helper.params['aggregation_methods'] == config.AGGR_FOOLSGOLD or helper.params['aggregation_methods'] == config.AGGR_KRUM \
+                    or helper.params['aggregation_methods'] == config.AGGR_CONTRA:
                 epochs_local_update_list.append(client_grad)
             else:
                 epochs_local_update_list.append(local_model_update_dict)

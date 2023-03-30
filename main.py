@@ -198,6 +198,8 @@ if __name__ == '__main__':
                                                                agent_name_keys, num_samples_dict)
         is_updated = True
 
+        print("type of updates in main.py", type(updates))
+
         # Switch between different aggregators, take updates from previous step
         if helper.params['aggregation_methods'] == config.AGGR_MEAN:
             # Average the models
