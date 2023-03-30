@@ -206,7 +206,7 @@ class Helper:
             for i in range(0, len(state_keys)):
                 local_model_gradients = epochs_submit_update_dict[state_keys[i]][0] # agg 1 interval
                 num_samples = num_samples_dict[state_keys[i]]
-                print("type of local_model_gradients", type(local_model_gradients))
+                # print("type of local_model_gradients", type(local_model_gradients))
                 updates[state_keys[i]] = (num_samples, copy.deepcopy(local_model_gradients))
             return None, updates
         elif self.params['aggregation_methods'] == config.AGGR_KRUM:
@@ -404,7 +404,7 @@ class Helper:
         names = []
         for name, data in updates.items():
             # print("data", data)
-            print("Type of data[1]", type(data[1]))
+            # print("Type of data[1]", type(data[1]))
             client_grads.append(data[1])  # gradient orgainal code
             # client_grads.append([data[1]['fc2.weight'], data[1]['fc2.bias']])  # gradient
             # client_grads.append([torch.as_tensor(data[1]['fc2.weight']), torch.as_tensor(data[1]['fc2.bias'])]) # issue of sometime data[1] is tensor, sometimes is array
@@ -820,7 +820,7 @@ class FoolsGold(object):
         self.use_memory = use_memory
 
     def aggregate_gradients(self, client_grads, names):
-        print("type of client_grads[0] in FoolsGold aggregate_gradients", type(client_grads[0]))
+        # print("type of client_grads[0] in FoolsGold aggregate_gradients", type(client_grads[0]))
         cur_time = time.time()
         num_clients = len(client_grads)
 
@@ -920,8 +920,8 @@ class FoolsGold(object):
         #     # print("len(temp2)", len(temp2))
         #     agg_grads.append(stacked_temp_w)
         #     agg_grads.append(stacked_temp_b)
-        print("len(client_grads)", len(client_grads)) # 8
-        print("len(client_grads[0])", len(client_grads[0])) # 2
+        # print("len(client_grads)", len(client_grads)) # 8
+        # print("len(client_grads[0])", len(client_grads[0])) # 2
 
         for i in range(len(client_grads[0])):
             assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
@@ -935,7 +935,8 @@ class FoolsGold(object):
                 # print("i", i)
                 # print("client_grad", client_grad)
                 # print("client_grad[i]", client_grad[i])
-                temp += wv[c] * client_grad[i].cpu()
+                if len(client_grad)!=0 : # Yang added for client_grad == []
+                    temp += wv[c] * client_grad[i].cpu()
             temp = temp / len(client_grads)
             agg_grads.append(temp)
 
