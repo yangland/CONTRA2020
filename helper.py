@@ -224,13 +224,14 @@ class Helper:
                 num_samples=num_samples_dict[state_keys[i]]
 
                 for name, data in local_model_update_list[0].items():
-                    update[name] = torch.zeros_like(torch.tensor(data))
+                    update[name] = torch.zeros_like(torch.as_tensor(data))
 
                 for j in range(0, len(local_model_update_list)):
                     local_model_update_dict= local_model_update_list[j]
                     for name, data in local_model_update_dict.items():
                         # Yang updated to torch.tensor(XX).cuda()
-                        weight_accumulator[name].add_(torch.tensor(local_model_update_dict[name]).to(config.device))
+                        # weight_accumulator[name].add_(torch.tensor(local_model_update_dict[name]).to(config.device))
+                        weight_accumulator[name].add_(torch.as_tensor(local_model_update_dict[name]).to(config.device))
 
                         # Yang: update is a dict, add_ works on tensor
                         # update[name].add_(local_model_update_dict[name])
@@ -240,7 +241,8 @@ class Helper:
                         # detached_data= data.cpu().detach().numpy()
                         # print("data", data)
                         # sometimes this data is list, int, can be different types
-                        detached_data = torch.tensor(data).cpu().numpy()
+                        # detached_data = torch.tensor(data).cpu().numpy()
+                        detached_data = torch.as_tensor(data).cpu().numpy()
 
                         # print(detached_data.shape)
                         detached_data=detached_data.tolist()
@@ -392,9 +394,10 @@ class Helper:
         alphas = []
         names = []
         for name, data in updates.items():
-            print("data[1]", data[1])
+            # print("data[1]", data[1])
             # client_grads.append(data[1])  # gradient
-            client_grads.append([data[1]['fc2.weight'], data[1]['fc2.bias']])  # gradient
+            # client_grads.append([data[1]['fc2.weight'], data[1]['fc2.bias']])  # gradient
+            client_grads.append([torch.as_tensor(data[1]['fc2.weight']), torch.as_tensor(data[1]['fc2.bias'])]) # issue of sometime data[1] is tensor, sometimes is array
             alphas.append(data[0])  # num_samples
             names.append(name)
 
@@ -836,6 +839,7 @@ class FoolsGold(object):
             if len(client_grads) != 0 and len(client_grads[i]) != 0: # Yang added "is not None" in case client_grads is None when alpha is too small
                 # print("i", i)
                 # print(client_grads[i][0].size())
+                # print("client_grads[i][0]", client_grads[i][0])
                 grads[i] = np.reshape(client_grads[i][0].detach().cpu().numpy(), (grad_len))
             else:
                 grads[i] = 0
