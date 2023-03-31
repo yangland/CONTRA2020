@@ -313,14 +313,24 @@ class Helper:
         optimizer.zero_grad()
         n = len(client_grads)
         num_clients = len(client_grads)
-        grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod()
+        # print("shape of [-2] layer:", np.array(client_grads[0][-2].cpu().data.numpy().shape)) # [10, 784] MinstNet, [10, 256] ResNet18
+        # print("shape of [-1] layer:", np.array(client_grads[0][-1].cpu().data.numpy().shape)) # [10]
+        # print("result of [-1] layer:", np.array(client_grads[0][-1].cpu().data.numpy()))  #
+
+        for i in range(len(client_grads[0])):
+            print("shape of " + str(i) + " layer:", np.array(client_grads[0][i].cpu().data.numpy().shape))
+
+        grad_len = np.array(client_grads[0][-2].cpu().data.numpy().shape).prod() # the product of the second last layer's shape
+        # print("grad_len", grad_len) # 2560 cifar ResNet_18
         grads = np.zeros((num_clients, grad_len))
 
         for i in range(len(client_grads)):
             if len(client_grads) != 0 and len(client_grads[i])!=0 :
-                grads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len))
+                grads[i] = np.reshape(client_grads[i][-2].cpu().data.numpy(), (grad_len)) # reshape wht [-2] layer to [1 x ..]
             else:
                 grads[i] = 0
+
+        # use grads to get the krum scores, only use grads in the -2 layer
         scores = get_krum_scores(grads,n - clip)
         good_idx = np.argpartition(scores, n - clip)[:(n - clip)]
         print('good_idx', good_idx)
@@ -335,18 +345,12 @@ class Helper:
             temp = temp / len(client_grads)
             agg_grads.append(temp)
 
-        #print(np.shape(T))
-        #T_t = torch.as_tensor(T)
-        #client_grads_mean = np.mean(agg_grads, axis = 0)
         for i, (name, params) in enumerate(target_model.named_parameters()):
             #if (i in good_idx):
             agg_grads[i] = agg_grads[i] * self.params["eta"]
             if params.requires_grad:
                 params.grad = agg_grads[i].to(config.device)
-        optimizer.step()
-        #wv=wv.tolist()
-        #utils.csv_record.add_weight_result(names, wv, alpha)
-        #client_grads=torch.from_numpy(client_grads).float()
+        optimizer.step() # makes an update to its parameters
         return True, names, client_grads
 
     # 'foolsgold'
@@ -405,9 +409,7 @@ class Helper:
         for name, data in updates.items():
             # print("data", data)
             # print("Type of data[1]", type(data[1]))
-            client_grads.append(data[1])  # gradient orgainal code
-            # client_grads.append([data[1]['fc2.weight'], data[1]['fc2.bias']])  # gradient
-            # client_grads.append([torch.as_tensor(data[1]['fc2.weight']), torch.as_tensor(data[1]['fc2.bias'])]) # issue of sometime data[1] is tensor, sometimes is array
+            client_grads.append(data[1])  # gradient org code
             alphas.append(data[0])  # num_samples
             names.append(name)
 
@@ -855,7 +857,7 @@ class FoolsGold(object):
                 # print("i", i)
                 # print(client_grads[i][0].size())
                 # print("client_grads[i][0]", client_grads[i][0])
-                grads[i] = np.reshape(client_grads[i][-2].detach().cpu().numpy(), (grad_len))
+                grads[i] = np.reshape(client_grads[i][-2].detach().cpu().numpy(), (grad_len)) # also only uses [-2] layer grads
             else:
                 grads[i] = 0
 
@@ -885,48 +887,6 @@ class FoolsGold(object):
         # print("client_grads[0]['fc2.weight'].size()", client_grads[0]['fc2.weight'].size()) #[10,784]
 
         # Iterate through each layer
-        # Yang updated to 2 layer loops but wrong
-        # for j in range(len(client_grads)):
-        #     temp_W = []
-        #     temp_B = []
-        #     for i in range(len(client_grads[0][1])):
-        #         assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
-        #         # print("wv[0]", wv[0]) # 0.0
-        #         # temp = wv[0] * torch.tensor(client_grads[j]['fc2.weight'][i]).cpu().clone()
-        #         # temp_b = wv[0] * torch.tensor(client_grads[j][1][i]).cpu().clone()
-        #         if len(client_grads[j])!=0: # Yang updated for client_grads empty
-        #             temp_w = wv[0] * client_grads[j][0][i].cpu().clone()
-        #             temp_b = wv[0] * client_grads[j][1][i].cpu().clone()
-        #         else:
-        #             temp_w = 0
-        #             temp_b = 0
-        #         # Aggregate gradients for a layer
-        #         for c, client_grad in enumerate(client_grads):
-        #             if c == 0:
-        #                 continue
-        #             # print("client_grad", client_grad)
-        #             # temp += wv[c] * torch.tensor(client_grad['fc2.weight'][i]).cpu()
-        #             # print("wv[c]: ", wv[c]) #0.0
-        #             # print("client_grad['fc2.weight'][i]: ", client_grad['fc2.weight'][i])
-        #             if len(client_grad)!=0: # Yang added
-        #                 temp_w += wv[c] * client_grad[0][i].cpu().clone()
-        #                 temp_b += wv[c] * client_grad[1][i].cpu().clone()
-        #             else:
-        #                 continue
-        #         temp_w = temp_w / len(client_grads)
-        #         temp_b = temp_b / len(client_grads)
-        #
-        #         # print("len(temp)", len(temp))
-        #         temp_W.append(temp_w)
-        #         temp_B.append(temp_b)
-        #         stacked_temp_w = torch.stack(temp_W)
-        #         stacked_temp_b = torch.stack(temp_B)
-        #     # print("len(temp2)", len(temp2))
-        #     agg_grads.append(stacked_temp_w)
-        #     agg_grads.append(stacked_temp_b)
-        # print("len(client_grads)", len(client_grads)) # 8
-        # print("len(client_grads[0])", len(client_grads[0])) # 2
-
         for i in range(len(client_grads[0])):
             assert len(wv) == len(client_grads), 'len of wv {} is not consistent with len of client_grads {}'.format(len(wv), len(client_grads))
             temp = wv[0] * client_grads[0][i].cpu().clone()

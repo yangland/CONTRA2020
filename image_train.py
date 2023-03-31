@@ -222,12 +222,14 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
                         if helper.params['aggregation_methods']==config.AGGR_FOOLSGOLD or helper.params['aggregation_methods']==config.AGGR_KRUM \
                                 or helper.params['aggregation_methods']==config.AGGR_CONTRA:
                             for i, (name, params) in enumerate(model.named_parameters()):
+                                # print("i, name:", i, name)
                                 if params.requires_grad:
                                     if internal_epoch == 1 and batch_id == 0:
                                         client_grad.append(params.grad.clone()) 
                                     else:
                                         client_grad[i] += params.grad.clone() 
 
+                        # print("len client_grad:", len(client_grad))
                         optimizer.step()
                         total_loss += loss.data
                         pred = output.data.max(1)[1]  # get the index of the max log-probability
@@ -321,7 +323,7 @@ def ImageTrain(helper, start_epoch, local_model, target_model, is_poison, agent_
             # if helper.params['aggregation_methods'] == config.AGGR_FOOLSGOLD or helper.params['aggregation_methods'] == config.AGGR_KRUM:
             if helper.params['aggregation_methods'] == config.AGGR_FOOLSGOLD or helper.params['aggregation_methods'] == config.AGGR_KRUM \
                     or helper.params['aggregation_methods'] == config.AGGR_CONTRA:
-                epochs_local_update_list.append(client_grad)
+                epochs_local_update_list.append(client_grad) # for all no_models
             else:
                 epochs_local_update_list.append(local_model_update_dict)
 

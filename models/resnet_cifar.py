@@ -121,3 +121,4 @@ if __name__ == '__main__':
     net = ResNet18()
     y = net(Variable(torch.randn(1,3,32,32)))
     print(y.size())
+    print(net)
